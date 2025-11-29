@@ -25,7 +25,12 @@
     }
   ],
   "multi_instance": false,
-  "services": ["nginx", "postgresql", "redis", "rabbitmq"],
+  "services": [
+    "nginx",
+    "postgresql",
+    "redis",
+    "rabbitmq"
+  ],
   "arguments": [
     {
       "name": "domain",
