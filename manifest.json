@@ -1,7 +1,10 @@
 {
   "manifest_version": 2,
   "id": "taiga",
-  "name": "Taiga",
+  "name": {
+    "en": "Taiga",
+    "fr": "Taiga"
+  },
   "version": "0.1.0~ynh1",
   "license": "AGPL-3.0",
   "description": {
