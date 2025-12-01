@@ -77,12 +77,12 @@ rm -rf /usr/local/lib/node_modules
 if ! dpkg -l | grep -q "^ii.*nodejs.*18"; then
     ynh_script_progression "Installing Node.js $nodejs_version from NodeSource..."
     curl -fsSL https://deb.nodesource.com/setup_${nodejs_version}.x | bash -
-    ynh_apt install nodejs
+    apt-get install -y nodejs
 fi
 
 # Ensure npm is installed (separate package in Debian)
 if ! command -v npm &> /dev/null; then
-    ynh_apt install npm
+    apt-get install -y npm
 fi
 
 # Verify we have Node.js 18 and npm
