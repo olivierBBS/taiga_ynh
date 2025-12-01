@@ -1,2 +1,22 @@
-# Example tests manifest for Taiga YunoHost app
-# See https://yunohost.org/en/packaging_apps_test for details
+
+[[test]]
+name = "Basic install"
+install_args.domain = "test.domain.tld"
+install_args.path = "/taiga"
+check_url = "/"
+
+[[test]]
+name = "Upgrade"
+upgrade = true
+
+[[test]]
+name = "Remove"
+remove = true
+
+[[test]]
+name = "Backup"
+backup = true
+
+[[test]]
+name = "Restore"
+restore = true

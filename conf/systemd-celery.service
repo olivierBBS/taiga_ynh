@@ -1,0 +1,41 @@
+[Unit]
+Description=Taiga Celery Worker
+After=network.target postgresql.service redis.service rabbitmq-server.service __APP__.service
+
+[Service]
+Type=exec
+User=__APP__
+Group=__APP__
+WorkingDirectory=__INSTALL_DIR__/taiga-back
+Environment="PYTHONPATH=__INSTALL_DIR__/taiga-back"
+Environment="DJANGO_SETTINGS_MODULE=settings.local"
+ExecStart=__INSTALL_DIR__/venv/bin/celery -A taiga.celery worker \
+    --loglevel=info \
+    --concurrency 4
+Restart=always
+RestartSec=3
+StandardOutput=append:/var/log/__APP__/__APP__-celery.log
+StandardError=append:/var/log/__APP__/__APP__-celery.log
+SyslogIdentifier=__APP__-celery
+
+# Sandboxing options
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+DevicePolicy=closed
+ProtectSystem=strict
+ProtectHome=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+LockPersonality=true
+SystemCallFilter=~@clock @debug @module @mount @obsolete @reboot @setuid @swap
+
+# Directories
+ReadWritePaths=__DATA_DIR__ __INSTALL_DIR__/taiga-back/media __INSTALL_DIR__/taiga-back/static /var/log/__APP__
+
+[Install]
+WantedBy=multi-user.target

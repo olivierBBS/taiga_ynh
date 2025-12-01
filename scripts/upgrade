@@ -1,7 +1,116 @@
 #!/bin/bash
-# YunoHost upgrade script for Taiga
-# See https://yunohost.org/en/packaging_apps_upgrade_script for details
 
-set -e
+source /usr/share/yunohost/helpers
 
-echo "Upgrade script placeholder for Taiga."
+#=================================================
+# STOP SYSTEMD SERVICES
+#=================================================
+ynh_script_progression "Stopping systemd services..."
+
+ynh_systemctl --service="$app" --action="stop"
+ynh_systemctl --service="$app-celery" --action="stop"
+
+#=================================================
+# DOWNLOAD, CHECK AND UNPACK SOURCE
+#=================================================
+ynh_script_progression "Upgrading source files..." --weight=5
+
+# Backup current backend
+ynh_safe_rm "$install_dir/taiga-back.old" || true
+if [ -d "$install_dir/taiga-back" ]; then
+    mv "$install_dir/taiga-back" "$install_dir/taiga-back.old"
+fi
+
+# Download new backend
+ynh_setup_source --dest_dir="$install_dir/taiga-back" --source_id="main" --keep="settings/local.py"
+
+# Backup current frontend
+ynh_safe_rm "$install_dir/taiga-front.old" || true
+if [ -d "$install_dir/taiga-front" ]; then
+    mv "$install_dir/taiga-front" "$install_dir/taiga-front.old"
+fi
+
+# Download new frontend
+ynh_setup_source --dest_dir="$install_dir/taiga-front" --source_id="front"
+
+#=================================================
+# UPDATE PYTHON DEPENDENCIES
+#=================================================
+ynh_script_progression "Updating Python dependencies..." --weight=15
+
+# Update virtualenv
+"$install_dir/venv/bin/pip" install --upgrade pip wheel setuptools
+"$install_dir/venv/bin/pip" install --upgrade -r "$install_dir/taiga-back/requirements.txt"
+"$install_dir/venv/bin/pip" install --upgrade gunicorn gevent
+
+#=================================================
+# UPDATE BACKEND CONFIGURATION
+#=================================================
+ynh_script_progression "Updating backend configuration..."
+
+# Update backend config
+ynh_config_add --template="local.py" --destination="$install_dir/taiga-back/settings/local.py"
+chmod 600 "$install_dir/taiga-back/settings/local.py"
+
+#=================================================
+# BUILD FRONTEND
+#=================================================
+ynh_script_progression "Rebuilding frontend..." --weight=10
+
+pushd "$install_dir/taiga-front"
+    ynh_exec_as_app npm ci
+    ynh_exec_as_app npm run build
+popd
+
+# Update frontend dist
+ynh_safe_rm "$install_dir/front-dist.old" || true
+if [ -d "$install_dir/front-dist" ]; then
+    mv "$install_dir/front-dist" "$install_dir/front-dist.old"
+fi
+mkdir -p "$install_dir/front-dist"
+cp -r "$install_dir/taiga-front/dist/"* "$install_dir/front-dist/"
+
+# Update frontend configuration
+ynh_config_add --template="conf.json" --destination="$install_dir/front-dist/conf.json"
+
+#=================================================
+# RUN DATABASE MIGRATIONS
+#=================================================
+ynh_script_progression "Running database migrations..." --weight=5
+
+pushd "$install_dir/taiga-back"
+    ynh_exec_as_app "$install_dir/venv/bin/python" manage.py migrate --noinput
+    ynh_exec_as_app "$install_dir/venv/bin/python" manage.py collectstatic --noinput
+    ynh_exec_as_app "$install_dir/venv/bin/python" manage.py compilemessages
+popd
+
+#=================================================
+# REAPPLY SYSTEM CONFIGURATIONS
+#=================================================
+ynh_script_progression "Upgrading system configurations..." --weight=1
+
+# Update systemd services
+ynh_config_add_systemd --service="$app" --template="systemd.service"
+ynh_config_add_systemd --service="$app-celery" --template="systemd-celery.service"
+
+# Update nginx
+ynh_config_add_nginx
+
+# Set permissions
+chown -R "$app:$app" "$install_dir"
+chown -R "$app:$app" "$data_dir"
+chmod 750 "$install_dir"
+chmod 750 "$data_dir"
+
+#=================================================
+# START SYSTEMD SERVICES
+#=================================================
+ynh_script_progression "Starting systemd services..." --weight=1
+
+ynh_systemctl --service="$app" --action="start" --wait_until="Listening at"
+ynh_systemctl --service="$app-celery" --action="start"
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+ynh_script_progression "Upgrade of $app completed" --last

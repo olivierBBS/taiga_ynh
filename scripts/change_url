@@ -1,4 +1,51 @@
 #!/bin/bash
-# YunoHost change_url script for Taiga
+#!/bin/bash
+
+source /usr/share/yunohost/helpers
+
+#=================================================
+# STOP SYSTEMD SERVICES
+#=================================================
+ynh_script_progression "Stopping systemd services..."
+
+ynh_systemctl --service="$app" --action="stop"
+ynh_systemctl --service="$app-celery" --action="stop"
+
+#=================================================
+# MODIFY URL IN NGINX CONF
+#=================================================
+ynh_script_progression "Updating NGINX web server configuration..."
+
+ynh_config_change_url_nginx
+
+#=================================================
+# UPDATE BACKEND CONFIGURATION
+#=================================================
+ynh_script_progression "Updating backend configuration..."
+
+# Update backend settings
+ynh_config_add --template="local.py" --destination="$install_dir/taiga-back/settings/local.py"
+chmod 600 "$install_dir/taiga-back/settings/local.py"
+
+#=================================================
+# UPDATE FRONTEND CONFIGURATION
+#=================================================
+ynh_script_progression "Updating frontend configuration..."
+
+# Update frontend configuration
+ynh_config_add --template="conf.json" --destination="$install_dir/front-dist/conf.json"
+
+#=================================================
+# START SYSTEMD SERVICES
+#=================================================
+ynh_script_progression "Starting systemd services..."
+
+ynh_systemctl --service="$app" --action="start" --wait_until="Listening at"
+ynh_systemctl --service="$app-celery" --action="start"
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+ynh_script_progression "Change of URL completed for $app" --last
 set -e
 # Placeholder: Add change_url logic here

@@ -1,98 +1,158 @@
 #!/bin/bash
-# YunoHost install script for Taiga
-# See https://yunohost.org/en/packaging_apps_install_script for details
 
-# Exit on error
-set -e
+source /usr/share/yunohost/helpers
 
-echo "Install script placeholder for Taiga."
+#=================================================
+# INITIALIZE AND STORE SETTINGS
+#=================================================
+ynh_script_progression "Initializing installation parameters..."
 
-# YunoHost install script for Taiga
-# See https://yunohost.org/en/packaging_apps_install_script for details
+# Generate secret key and RabbitMQ password
+secret_key=$(ynh_string_random --length=50)
+rabbitmq_pwd=$(ynh_string_random --length=32)
+rabbitmq_user=$app
 
-# Check arguments
-domain=$YNH_APP_ARG_DOMAIN
-path_url=$YNH_APP_ARG_PATH
-app=taiga
-app_user=taiga
-final_path=/var/www/$app
+# Store settings
+ynh_app_setting_set --key=secret_key --value="$secret_key"
+ynh_app_setting_set --key=rabbitmq_user --value="$rabbitmq_user"
+ynh_app_setting_set --key=rabbitmq_pwd --value="$rabbitmq_pwd"
 
-if [ -z "$domain" ] || [ -z "$path_url" ]; then
-	ynh_die "Missing required arguments: domain or path."
-fi
+#=================================================
+# DOWNLOAD, CHECK AND UNPACK SOURCE
+#=================================================
+ynh_script_progression "Setting up source files..." --weight=5
 
-# Install system dependencies
-ynh_install_app_dependencies python3 python3-venv python3-pip python3-dev build-essential libpq-dev git redis-server rabbitmq-server postgresql nginx
+# Download backend
+ynh_setup_source --dest_dir="$install_dir/taiga-back" --source_id="main"
 
-# Create system user
-ynh_system_user_create $app_user
+# Download frontend  
+ynh_setup_source --dest_dir="$install_dir/taiga-front" --source_id="front"
 
-# Create app directory
-ynh_setup_source $final_path
+#=================================================
+# SPECIFIC SETUP
+#=================================================
+ynh_script_progression "Configuring RabbitMQ..." --weight=2
 
-# Clone Taiga backend if not present
-if [ ! -d "$final_path/taiga-back" ]; then
-	sudo -u $app_user git clone https://github.com/taigaio/taiga-back.git $final_path/taiga-back
-fi
+# Create RabbitMQ user and vhost
+ynh_exec_warn_less rabbitmqctl add_user "$rabbitmq_user" "$rabbitmq_pwd" || true
+ynh_exec_warn_less rabbitmqctl add_vhost "$rabbitmq_user" || true
+ynh_exec_warn_less rabbitmqctl set_permissions -p "$rabbitmq_user" "$rabbitmq_user" ".*" ".*" ".*"
 
-echo "[INFO] Taiga backend cloned to $final_path/taiga-back."
+#=================================================
+# PYTHON DEPENDENCIES
+#=================================================
+ynh_script_progression "Installing Python dependencies..." --weight=20
 
+# Create virtualenv
+python3 -m venv "$install_dir/venv"
 
-# Set up Python virtual environment
-sudo -u $app_user python3 -m venv $final_path/venv
-sudo -u $app_user $final_path/venv/bin/pip install --upgrade pip
-sudo -u $app_user $final_path/venv/bin/pip install -r $final_path/taiga-back/requirements.txt
+# Install Python packages
+"$install_dir/venv/bin/pip" install --upgrade pip wheel setuptools
+"$install_dir/venv/bin/pip" install -r "$install_dir/taiga-back/requirements.txt"
+"$install_dir/venv/bin/pip" install gunicorn gevent
 
-# Set up PostgreSQL database and user
-db_name=taiga
-db_user=taiga
-db_pwd=$(ynh_string_random)
-ynh_psql_create_db $db_name $db_user $db_pwd
+#=================================================
+# ADD TAIGA CONFIGURATION
+#=================================================
+ynh_script_progression "Adding Taiga configuration files..." --weight=1
 
-# Set up Redis (already installed)
-# No extra config needed for default local instance
+# Backend configuration
+ynh_config_add --template="local.py" --destination="$install_dir/taiga-back/settings/local.py"
 
-# Set up RabbitMQ user and vhost
-rmq_user=taiga
-rmq_pwd=$(ynh_string_random)
-sudo rabbitmqctl add_user $rmq_user $rmq_pwd || true
-sudo rabbitmqctl add_vhost $rmq_user || true
-sudo rabbitmqctl set_permissions -p $rmq_user $rmq_user ".*" ".*" ".*"
+# Set proper permissions on config
+chmod 600 "$install_dir/taiga-back/settings/local.py"
 
-# Generate Taiga config (placeholder, should be templated)
-cat > $final_path/taiga-back/settings/local.py <<EOF
-from .common import *
+#=================================================
+# BUILD FRONTEND
+#=================================================
+ynh_script_progression "Building frontend..." --weight=10
 
-DEBUG = False
-PUBLIC_REGISTER_ENABLED = True
-SECRET_KEY = '$(ynh_string_random 32)'
-DATABASES = {
-	'default': {
-		'ENGINE': 'django.db.backends.postgresql',
-		'NAME': '$db_name',
-		'USER': '$db_user',
-		'PASSWORD': '$db_pwd',
-		'HOST': 'localhost',
-		'PORT': '',
-	}
-}
-REDIS_URL = 'redis://localhost:6379/0'
-RABBITMQ_URL = 'amqp://$rmq_user:$rmq_pwd@localhost:5672/$rmq_user'
-MEDIA_URL = '/media/'
-STATIC_URL = '/static/'
-SITES = {
-	'front': {
-		'scheme': 'https',
-		'domain': '$domain',
-		'port': 443,
-	}
-}
+# Install Node.js if needed
+ynh_nodejs_install
+
+# Build frontend
+pushd "$install_dir/taiga-front"
+    ynh_exec_as_app npm ci
+    ynh_exec_as_app npm run build
+popd
+
+# Copy built frontend to final location
+mkdir -p "$install_dir/front-dist"
+cp -r "$install_dir/taiga-front/dist/"* "$install_dir/front-dist/"
+
+# Frontend configuration
+ynh_config_add --template="conf.json" --destination="$install_dir/front-dist/conf.json"
+
+#=================================================
+# INITIALIZE DATABASE
+#=================================================
+ynh_script_progression "Initializing database..." --weight=5
+
+pushd "$install_dir/taiga-back"
+    # Run migrations
+    ynh_exec_as_app "$install_dir/venv/bin/python" manage.py migrate --noinput
+    
+    # Collect static files
+    ynh_exec_as_app "$install_dir/venv/bin/python" manage.py collectstatic --noinput
+    
+    # Compile messages
+    ynh_exec_as_app "$install_dir/venv/bin/python" manage.py compilemessages
+    
+    # Create admin user
+    ynh_exec_as_app "$install_dir/venv/bin/python" manage.py createsuperuser \
+        --noinput --username="$admin" --email="$admin@$domain" || true
+    
+    # Change admin password
+    ynh_exec_as_app "$install_dir/venv/bin/python" manage.py changepassword "$admin" <<EOF
+$password
+$password
 EOF
+popd
+
+#=================================================
+# CREATE DATA DIRECTORIES
+#=================================================
+ynh_script_progression "Creating data directories..."
+
+# Create media directory
+mkdir -p "$data_dir/media"
+
+#=================================================
+# CREATE LOG DIRECTORY
+#=================================================
+mkdir -p "/var/log/$app"
+chown -R "$app:$app" "/var/log/$app"
+
+#=================================================
+# SYSTEM CONFIGURATION
+#=================================================
+ynh_script_progression "Adding system configurations related to $app..." --weight=1
+
+# Create systemd services
+ynh_config_add_systemd --service="$app" --template="systemd.service"
+ynh_config_add_systemd --service="$app-celery" --template="systemd-celery.service"
+
+# Add nginx configuration
+ynh_config_add_nginx
 
 # Set permissions
-chown -R $app_user: $final_path
+chown -R "$app:$app" "$install_dir"
+chown -R "$app:$app" "$data_dir"
+chmod 750 "$install_dir"
+chmod 750 "$data_dir"
 
-# Configure nginx (placeholder, should use YunoHost helpers)
-ynh_add_nginx_config
+#=================================================
+# START SYSTEMD SERVICE
+#=================================================
+ynh_script_progression "Starting systemd services..." --weight=1
 
-echo "[INFO] Taiga install complete. Please review configs and finalize frontend setup."
+# Start and enable services
+ynh_systemctl --service="$app" --action="enable"
+ynh_systemctl --service="$app" --action="start" --wait_until="Listening at"
+ynh_systemctl --service="$app-celery" --action="enable"
+ynh_systemctl --service="$app-celery" --action="start"
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+ynh_script_progression "Installation of $app completed" --last

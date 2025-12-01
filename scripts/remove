@@ -1,7 +1,47 @@
 #!/bin/bash
-# YunoHost remove script for Taiga
-# See https://yunohost.org/en/packaging_apps_remove_script for details
 
-set -e
+source /usr/share/yunohost/helpers
 
-echo "Remove script placeholder for Taiga."
+#=================================================
+# STOP AND REMOVE SERVICES
+#=================================================
+ynh_script_progression "Stopping and removing systemd services..."
+
+# Stop services (don't fail if they don't exist)
+ynh_systemctl --service="$app" --action="stop"
+ynh_systemctl --service="$app-celery" --action="stop"
+
+# Remove systemd services
+ynh_config_remove_systemd --service="$app"
+ynh_config_remove_systemd --service="$app-celery"
+
+#=================================================
+# REMOVE RABBITMQ USER AND VHOST
+#=================================================
+ynh_script_progression "Removing RabbitMQ configuration..."
+
+rabbitmq_user=$(ynh_app_setting_get --key=rabbitmq_user)
+
+if [ -n "$rabbitmq_user" ]; then
+    ynh_exec_warn_less rabbitmqctl delete_vhost "$rabbitmq_user" || true
+    ynh_exec_warn_less rabbitmqctl delete_user "$rabbitmq_user" || true
+fi
+
+#=================================================
+# REMOVE NGINX CONFIGURATION
+#=================================================
+ynh_script_progression "Removing NGINX web server configuration..."
+
+ynh_config_remove_nginx
+
+#=================================================
+# REMOVE LOG FILES
+#=================================================
+ynh_script_progression "Removing log files..."
+
+ynh_safe_rm "/var/log/$app"
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+ynh_script_progression "Removal of $app completed" --last

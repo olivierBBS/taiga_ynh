@@ -1,5 +1,66 @@
 #!/bin/bash
-# YunoHost restore script for Taiga
-# See https://yunohost.org/en/packaging_apps_restore_script for details
-set -e
-# Placeholder: Add restore logic here
+
+source /usr/share/yunohost/helpers
+
+#=================================================
+# RESTORE THE APP MAIN DIR
+#=================================================
+ynh_script_progression "Restoring the app main directory..."
+
+ynh_restore "$install_dir"
+
+#=================================================
+# RESTORE THE DATA DIRECTORY
+#=================================================
+ynh_script_progression "Restoring the data directory..."
+
+ynh_restore "$data_dir"
+
+#=================================================
+# RESTORE THE POSTGRESQL DATABASE
+#=================================================
+ynh_script_progression "Restoring the PostgreSQL database..."
+
+ynh_psql_db_shell < ./db.sql
+
+#=================================================
+# RESTORE SYSTEM CONFIGURATIONS
+#=================================================
+ynh_script_progression "Restoring system configurations..."
+
+ynh_restore "/etc/nginx/conf.d/$domain.d/$app.conf"
+ynh_restore "/etc/systemd/system/$app.service"
+ynh_restore "/etc/systemd/system/$app-celery.service"
+
+systemctl daemon-reload
+systemctl enable "$app.service" --quiet
+systemctl enable "$app-celery.service" --quiet
+
+ynh_restore "/var/log/$app/"
+
+#=================================================
+# RESTORE RABBITMQ CONFIGURATION
+#=================================================
+ynh_script_progression "Restoring RabbitMQ configuration..."
+
+rabbitmq_user=$(ynh_app_setting_get --key=rabbitmq_user)
+rabbitmq_pwd=$(ynh_app_setting_get --key=rabbitmq_pwd)
+
+ynh_exec_warn_less rabbitmqctl add_user "$rabbitmq_user" "$rabbitmq_pwd" || true
+ynh_exec_warn_less rabbitmqctl add_vhost "$rabbitmq_user" || true
+ynh_exec_warn_less rabbitmqctl set_permissions -p "$rabbitmq_user" "$rabbitmq_user" ".*" ".*" ".*"
+
+#=================================================
+# RELOAD NGINX AND START SERVICES
+#=================================================
+ynh_script_progression "Reloading NGINX web server and starting services..."
+
+ynh_systemctl --service=nginx --action=reload
+
+ynh_systemctl --service="$app" --action="start" --wait_until="Listening at"
+ynh_systemctl --service="$app-celery" --action="start"
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+ynh_script_progression "Restoration completed for $app" --last

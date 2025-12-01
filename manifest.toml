@@ -1,33 +1,94 @@
-manifest_version = 2
+packaging_format = 2
+
 id = "taiga"
 name = "Taiga"
-version = "0.1.0~ynh1"
-license = "AGPL-3.0"
-description.en = "Agile project management platform (YunoHost package)"
-description.fr = "Plateforme de gestion de projet agile (paquet YunoHost)"
-url = "https://taiga.io/"
-multi_instance = false
+description.en = "Agile project management platform"
+description.fr = "Plateforme de gestion de projet agile"
 
-[[maintainers]]
-name = "Your Name"
-email = "your@email.com"
+version = "6.7.0~ynh1"
 
-[[requirements]]
-type = "ynh_version"
-version = ">= 11.0.0"
+maintainers = ["unedeplus"]
 
-services = ["nginx", "postgresql", "redis", "rabbitmq"]
+[upstream]
+license = "AGPL-3.0-or-later"
+website = "https://taiga.io/"
+demo = "https://tree.taiga.io/discover"
+admindoc = "https://docs.taiga.io/"
+userdoc = "https://docs.taiga.io/"
+code = "https://github.com/taigaio"
 
-[[arguments]]
-name = "domain"
-type = "domain"
-ask.en = "On which domain should Taiga be installed?"
-ask.fr = "Sur quel domaine installer Taiga ?"
-example = "domain.tld"
+[integration]
+yunohost = ">= 11.2"
+helpers_version = "2.1"
+architectures = "all"
+multi_instance = true
+ldap = false
+sso = false
+disk = "500M"
+ram.build = "500M"
+ram.runtime = "256M"
 
-[[arguments]]
-name = "path"
-type = "path"
-ask.en = "On which path should Taiga be accessible?"
-ask.fr = "À quel chemin Taiga doit-il être accessible ?"
-example = "/taiga"
+[install]
+    [install.domain]
+    type = "domain"
+
+    [install.path]
+    type = "path"
+    default = "/taiga"
+
+    [install.init_main_permission]
+    type = "group"
+    default = "visitors"
+    
+    [install.admin]
+    type = "user"
+    
+    [install.password]
+    type = "password"
+
+[resources]
+    [resources.sources]
+        [resources.sources.main]
+        url = "https://github.com/taigaio/taiga-back/archive/refs/tags/6.7.0.tar.gz"
+        sha256 = "3582489b7b2af4ba22f455625bcd1c8e102ded0070aee09ddec9f04c3f0be85e"
+        
+        [resources.sources.front]
+        url = "https://github.com/taigaio/taiga-front/archive/refs/tags/6.7.0.tar.gz"
+        sha256 = "037b80779d7c702e5a8a06abefe5b7ab6b2f997e73334aea628fb0fc70e37522"
+
+    [resources.system_user]
+
+    [resources.install_dir]
+    
+    [resources.data_dir]
+
+    [resources.permissions]
+    main.url = "/"
+
+    [resources.ports]
+    main.default = 8001
+
+    [resources.apt]
+    packages = [
+        "python3",
+        "python3-venv", 
+        "python3-pip",
+        "python3-dev",
+        "build-essential",
+        "libpq-dev",
+        "git",
+        "gettext",
+        "libxml2-dev",
+        "libxslt1-dev",
+        "zlib1g-dev",
+        "libjpeg-dev",
+        "libfreetype6-dev",
+        "libtiff5-dev",
+        "redis-server",
+        "rabbitmq-server",
+        "postgresql",
+        "postgresql-contrib"
+    ]
+
+    [resources.database]
+    type = "postgresql"
