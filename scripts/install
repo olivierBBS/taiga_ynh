@@ -68,9 +68,14 @@ chmod 600 "$install_dir/taiga-back/settings/local.py"
 #=================================================
 ynh_script_progression "Building frontend..." --weight=10
 
-# Install Node.js from NodeSource
-if ! command -v node &> /dev/null || [[ $(node --version | cut -d'v' -f2 | cut -d'.' -f1) -lt 18 ]]; then
+# Install Node.js 18 specifically (node-sass incompatible with v22+)
+current_node_version=$(node --version 2>/dev/null | cut -d'v' -f2 | cut -d'.' -f1)
+if [[ "$current_node_version" != "18" ]]; then
     ynh_script_progression "Installing Node.js $nodejs_version..."
+    # Remove any existing nodejs first
+    apt-get remove -y nodejs npm 2>/dev/null || true
+    rm -rf /usr/local/lib/node_modules /usr/local/bin/node /usr/local/bin/npm /usr/local/bin/npx 2>/dev/null || true
+    # Install Node.js 18.x specifically
     curl -fsSL https://deb.nodesource.com/setup_${nodejs_version}.x | bash -
     ynh_apt install nodejs
 fi
