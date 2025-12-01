@@ -1,0 +1,94 @@
+═══════════════════════════════════════════════════════════════
+    INSTALL TAIGA ON YUNOHOST - taiga.dix30.be
+═══════════════════════════════════════════════════════════════
+
+STEP 1: SSH to your server
+───────────────────────────────────────────────────────────────
+ssh admin@192.168.1.170
+
+
+STEP 2: Install Taiga (choose one method)
+───────────────────────────────────────────────────────────────
+
+Method A - Interactive (recommended for first install):
+────────────────────────────────────────────────────────
+sudo yunohost app install https://github.com/unedeplus/taiga_ynh
+
+Then answer the prompts:
+  Domain: taiga.dix30.be
+  Path: / (for root) or /taiga (for subpath)
+  Permission: visitors (public) or all_users (private)
+  Admin user: [your yunohost username]
+  Password: [secure password for Taiga admin]
+
+
+Method B - One-line command (faster):
+────────────────────────────────────────────────────────
+sudo yunohost app install https://github.com/unedeplus/taiga_ynh \
+  -a domain=taiga.dix30.be \
+  -a path=/ \
+  -a init_main_permission=visitors \
+  -a admin=YOUR_USERNAME \
+  -a password=YOUR_SECURE_PASSWORD
+
+
+STEP 3: Wait for installation (10-20 minutes)
+───────────────────────────────────────────────────────────────
+The installation will:
+  ✓ Download Taiga backend and frontend
+  ✓ Setup PostgreSQL database
+  ✓ Configure Redis and RabbitMQ
+  ✓ Build the frontend (takes time)
+  ✓ Configure nginx and systemd services
+
+
+STEP 4: Access Taiga
+───────────────────────────────────────────────────────────────
+URL: https://taiga.dix30.be/
+
+Login with the admin credentials you set during installation.
+
+
+TROUBLESHOOTING
+───────────────────────────────────────────────────────────────
+
+Check services status:
+  sudo systemctl status taiga
+  sudo systemctl status taiga-celery
+
+View logs:
+  sudo journalctl -u taiga -n 100 --no-pager
+  sudo journalctl -u taiga-celery -n 100 --no-pager
+
+Check installation logs:
+  sudo yunohost log show
+
+If services fail to start:
+  sudo systemctl restart taiga
+  sudo systemctl restart taiga-celery
+
+
+IMPORTANT NOTES
+───────────────────────────────────────────────────────────────
+✓ Make sure DNS for taiga.dix30.be points to 192.168.1.170
+✓ Let's Encrypt SSL will be auto-configured by YunoHost
+✓ Minimum 512MB RAM required (1GB recommended)
+✓ Installation is resource-intensive (frontend build)
+✓ Email is disabled by default (configure SMTP later)
+
+
+AFTER INSTALLATION
+───────────────────────────────────────────────────────────────
+
+Configure email (optional):
+  sudo nano /var/www/taiga/taiga-back/settings/local.py
+  # Edit EMAIL_BACKEND settings
+  sudo systemctl restart taiga
+
+View app info:
+  sudo yunohost app info taiga
+
+Backup Taiga:
+  sudo yunohost backup create --apps taiga
+
+═══════════════════════════════════════════════════════════════
