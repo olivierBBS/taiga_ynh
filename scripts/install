@@ -97,9 +97,11 @@ fi
 # Set ownership of install directory so app user can build
 chown -R "$app:$app" "$install_dir"
 
-# Build frontend
+# Build frontend (with memory-friendly npm settings)
 pushd "$install_dir/taiga-front"
-    sudo -u "$app" npm ci
+    # Use npm install instead of npm ci (more memory efficient for large dependency trees)
+    # Limit concurrent downloads to reduce memory usage
+    sudo -u "$app" npm install --no-audit --no-fund --prefer-offline --loglevel=error
     sudo -u "$app" npm run build
 popd
 
