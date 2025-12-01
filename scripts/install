@@ -68,9 +68,12 @@ chmod 600 "$install_dir/taiga-back/settings/local.py"
 #=================================================
 ynh_script_progression "Building frontend..." --weight=10
 
-# Install Node.js
-ynh_install_nodejs --nodejs_version=$nodejs_version
-ynh_use_nodejs
+# Install Node.js from NodeSource
+if ! command -v node &> /dev/null || [[ $(node --version | cut -d'v' -f2 | cut -d'.' -f1) -lt 18 ]]; then
+    ynh_script_progression "Installing Node.js $nodejs_version..."
+    curl -fsSL https://deb.nodesource.com/setup_${nodejs_version}.x | bash -
+    ynh_apt install nodejs
+fi
 
 # Build frontend
 pushd "$install_dir/taiga-front"
