@@ -1,6 +1,7 @@
 #!/bin/bash
 
 source /usr/share/yunohost/helpers
+source _common.sh
 
 #=================================================
 # INITIALIZE AND STORE SETTINGS
@@ -34,9 +35,9 @@ ynh_setup_source --dest_dir="$install_dir/taiga-front" --source_id="front"
 ynh_script_progression "Configuring RabbitMQ..." --weight=2
 
 # Create RabbitMQ user and vhost
-rabbitmqctl add_user "$rabbitmq_user" "$rabbitmq_pwd" 2>&1 || true
-rabbitmqctl add_vhost "$app" 2>&1 || true
-rabbitmqctl set_permissions -p "$app" "$rabbitmq_user" ".*" ".*" ".*" 2>&1 || true
+ynh_exec_warn_less rabbitmqctl add_user "$rabbitmq_user" "$rabbitmq_pwd" || true
+ynh_exec_warn_less rabbitmqctl add_vhost "$rabbitmq_user" || true
+ynh_exec_warn_less rabbitmqctl set_permissions -p "$rabbitmq_user" "$rabbitmq_user" ".*" ".*" ".*"
 
 #=================================================
 # PYTHON DEPENDENCIES
@@ -67,8 +68,9 @@ chmod 600 "$install_dir/taiga-back/settings/local.py"
 #=================================================
 ynh_script_progression "Building frontend..." --weight=10
 
-# Install Node.js if needed
-ynh_nodejs_install
+# Install Node.js
+ynh_install_nodejs --nodejs_version=$nodejs_version
+ynh_use_nodejs
 
 # Build frontend
 pushd "$install_dir/taiga-front"
