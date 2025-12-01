@@ -110,12 +110,14 @@ fi
 
 # Build frontend (with increased Node.js heap memory)
 pushd "$install_dir/taiga-front"
-    # Increase Node.js heap size to 2GB (default is ~512MB on 32-bit, 1.4GB on 64-bit)
-    # This prevents "JavaScript heap out of memory" during npm install
-    export NODE_OPTIONS="--max-old-space-size=2048"
+    # Increase Node.js heap size to 4GB and reduce memory pressure
+    # Taiga's 1000+ dependencies require more than default 1.4GB heap
+    export NODE_OPTIONS="--max-old-space-size=4096"
     
-    # Use npm install with memory-friendly settings
-    sudo -u "$app" NODE_OPTIONS="$NODE_OPTIONS" npm install --no-audit --no-fund --prefer-offline --loglevel=error
+    # Use npm install with aggressive memory reduction
+    # --legacy-peer-deps: skip peer dependency resolution (saves memory)
+    # --maxsockets=1: limit concurrent downloads to reduce memory spikes
+    sudo -u "$app" NODE_OPTIONS="$NODE_OPTIONS" npm install --no-audit --no-fund --prefer-offline --loglevel=error --legacy-peer-deps --maxsockets=1
     sudo -u "$app" NODE_OPTIONS="$NODE_OPTIONS" npm run build
     
     unset NODE_OPTIONS
