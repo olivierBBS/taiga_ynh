@@ -126,10 +126,13 @@ fi
 # Build frontend
 ynh_script_progression "Building frontend..."
 
+# Locate the pre-built tarball (must be done before pushd to ensure correct path resolution)
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+PKG_ROOT=$(dirname "$SCRIPT_DIR")
+LOCAL_PREBUILT="$PKG_ROOT/taiga-front-6.7.0-docker-dist.tar.gz"
+
 pushd "$install_dir/taiga-front"
     # Check if pre-built assets package exists
-    PKG_ROOT=$(dirname $(dirname "$0"))
-    LOCAL_PREBUILT="$PKG_ROOT/taiga-front-6.7.0-docker-dist.tar.gz"
     TMP_PREBUILT="/tmp/taiga-front-prebuilt.tar.gz"
     
     if [ -f "$LOCAL_PREBUILT" ]; then
