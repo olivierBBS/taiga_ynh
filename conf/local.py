@@ -13,7 +13,7 @@ DATABASES = {
         "NAME": "__DB_NAME__",
         "USER": "__DB_USER__",
         "PASSWORD": "__DB_PWD__",
-        "HOST": "",
+        "HOST": "/var/run/postgresql",
         "PORT": "",
     }
 }

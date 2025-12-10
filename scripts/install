@@ -94,6 +94,8 @@ ynh_config_add --template="local.py" --destination="$install_dir/taiga-back/sett
 # Debug: check what was actually written to config
 ynh_print_info "DEBUG: Config file created, checking PASSWORD line:"
 grep "PASSWORD" "$install_dir/taiga-back/settings/local.py" || true
+ynh_print_info "DEBUG: Checking HOST line:"
+grep "HOST" "$install_dir/taiga-back/settings/local.py" || true
 
 # Set proper permissions on config
 chmod 600 "$install_dir/taiga-back/settings/local.py"
