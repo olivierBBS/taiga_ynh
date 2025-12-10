@@ -87,7 +87,9 @@ ram.runtime = "256M"
         "redis-server",
         "rabbitmq-server",
         "postgresql",
-        "postgresql-contrib"
+        "postgresql-contrib",
+        "nodejs",
+        "npm"
     ]
 
     # Database handled manually in install script to control password
