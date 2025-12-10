@@ -134,7 +134,7 @@ LOCAL_PREBUILT="$PKG_ROOT/taiga-front-6.7.0-docker-dist.tar.gz"
 # Debug: List files in package root to verify presence of prebuilt asset
 ynh_print_info "DEBUG: Looking for prebuilt asset at $LOCAL_PREBUILT"
 ynh_print_info "DEBUG: Contents of $PKG_ROOT:"
-ls -la "$PKG_ROOT" | ynh_print_info
+ls -la "$PKG_ROOT"
 
 pushd "$install_dir/taiga-front"
     # Check if pre-built assets package exists
