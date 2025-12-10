@@ -131,6 +131,11 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 PKG_ROOT=$(dirname "$SCRIPT_DIR")
 LOCAL_PREBUILT="$PKG_ROOT/taiga-front-6.7.0-docker-dist.tar.gz"
 
+# Debug: List files in package root to verify presence of prebuilt asset
+ynh_print_info "DEBUG: Looking for prebuilt asset at $LOCAL_PREBUILT"
+ynh_print_info "DEBUG: Contents of $PKG_ROOT:"
+ls -la "$PKG_ROOT" | ynh_print_info
+
 pushd "$install_dir/taiga-front"
     # Check if pre-built assets package exists
     TMP_PREBUILT="/tmp/taiga-front-prebuilt.tar.gz"
@@ -150,6 +155,11 @@ pushd "$install_dir/taiga-front"
         tar xzf "$PREBUILT_PACKAGE" -C "$install_dir"
         chown -R "$app:$app" "$install_dir"
     else
+        # FAIL SAFE: If we are here, it means we are about to build from source.
+        # Given the history of OOM crashes, we should probably warn or fail if RAM is low.
+        ynh_print_warn "WARNING: Pre-built frontend not found! Falling back to source build."
+        ynh_print_warn "This requires 8GB+ RAM and may crash your server."
+        
         # Build from source (requires 8GB+ RAM)
         ynh_script_progression "Building from source (requires 8GB+ RAM)..."
         
