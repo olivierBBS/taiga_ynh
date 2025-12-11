@@ -37,7 +37,7 @@ ProtectControlGroups=true
 ProtectKernelModules=true
 ProtectKernelTunables=true
 LockPersonality=true
-SystemCallFilter=~@clock @debug @module @mount @obsolete @reboot @setuid @swap
+# SystemCallFilter=~@clock @debug @module @mount @obsolete @reboot @setuid @swap
 
 # Directories
 ReadWritePaths=__DATA_DIR__ __INSTALL_DIR__/taiga-back/static /var/log/__APP__
