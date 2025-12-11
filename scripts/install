@@ -244,6 +244,8 @@ cp -r "$install_dir/taiga-front/dist/"* "$install_dir/front-dist/"
 
 # Frontend configuration
 ynh_config_add --template="conf.json" --destination="$install_dir/front-dist/conf.json"
+# Ensure conf.json is readable by Nginx (world-readable)
+chmod 644 "$install_dir/front-dist/conf.json"
 
 #=================================================
 # INITIALIZE DATABASE
@@ -308,6 +310,11 @@ chown -R "$app:$app" "$data_dir"
 # Allow Nginx (www-data) to traverse directories to serve static files
 chmod 755 "$install_dir"
 chmod 755 "$data_dir"
+
+# Ensure public assets are readable by Nginx
+chmod -R 755 "$install_dir/front-dist"
+chmod -R 755 "$install_dir/taiga-back/static"
+chmod -R 755 "$data_dir/media"
 
 #=================================================
 # START SYSTEMD SERVICE
