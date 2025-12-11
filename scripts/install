@@ -99,46 +99,9 @@ grep "HOST" "$install_dir/taiga-back/settings/local.py" || true
 
 # Debug: Verify DB connection with psql
 ynh_print_info "DEBUG: Testing DB connection with psql..."
-PGPASSWORD="$db_pwd" psql -h "/var/run/postgresql" -U "$db_user" -d "$db_name" -c "\conninfo" || ynh_print_warn "DEBUG: psql connection failed"
+PGPASSWORD="$db_pwd" psql -h /var/run/postgresql -U "$db_user" -d "$db_name" -c "\conninfo" || true
 
-# Debug: Verify Django settings
-ynh_print_info "DEBUG: Verifying Django settings..."
-# Debug: Verify Django settings and environment
-cat <<EOF > "$install_dir/debug_db.py"
-import sys, os, psycopg2
-sys.path.append('$install_dir/taiga-back')
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.local')
-from django.conf import settings
 
-print('--- DEBUG START ---')
-try:
-    print(f'DB Config in Settings: {settings.DATABASES["default"]}')
-except Exception as e:
-    print(f'Error reading settings: {e}')
-
-print(f'Environment PGHOST: {os.environ.get("PGHOST")}')
-print(f'Environment PGPORT: {os.environ.get("PGPORT")}')
-
-# Test raw psycopg2 connection with explicit socket
-print('Testing raw psycopg2 connection to /var/run/postgresql...')
-try:
-    conn = psycopg2.connect(
-        dbname='${db_name}',
-        user='${db_user}',
-        password='${db_pwd}',
-        host='/var/run/postgresql'
-    )
-    print('Raw psycopg2 connection: SUCCESS')
-    conn.close()
-except Exception as e:
-    print(f'Raw psycopg2 connection: FAILED - {e}')
-
-print('--- DEBUG END ---')
-EOF
-
-chown $app:$app "$install_dir/debug_db.py"
-sudo -u "$app" "$install_dir/venv/bin/python" "$install_dir/debug_db.py"
-rm "$install_dir/debug_db.py"
 
 # Set proper permissions on config
 chmod 600 "$install_dir/taiga-back/settings/local.py"
@@ -285,20 +248,20 @@ ynh_script_progression "Initializing database..." --weight=5
 
 pushd "$install_dir/taiga-back"
     # Run migrations
-    sudo -u "$app" "$install_dir/venv/bin/python" manage.py migrate --noinput
+    sudo -u "$app" env DJANGO_SETTINGS_MODULE=settings.local "$install_dir/venv/bin/python" manage.py migrate --noinput
     
     # Collect static files
-    sudo -u "$app" "$install_dir/venv/bin/python" manage.py collectstatic --noinput
+    sudo -u "$app" env DJANGO_SETTINGS_MODULE=settings.local "$install_dir/venv/bin/python" manage.py collectstatic --noinput
     
     # Compile messages
-    sudo -u "$app" "$install_dir/venv/bin/python" manage.py compilemessages
+    sudo -u "$app" env DJANGO_SETTINGS_MODULE=settings.local "$install_dir/venv/bin/python" manage.py compilemessages
     
     # Create admin user
-    sudo -u "$app" "$install_dir/venv/bin/python" manage.py createsuperuser \
+    sudo -u "$app" env DJANGO_SETTINGS_MODULE=settings.local "$install_dir/venv/bin/python" manage.py createsuperuser \
         --noinput --username="$admin" --email="$admin@$domain" || true
     
     # Change admin password
-    sudo -u "$app" "$install_dir/venv/bin/python" manage.py changepassword "$admin" <<EOF
+    sudo -u "$app" env DJANGO_SETTINGS_MODULE=settings.local "$install_dir/venv/bin/python" manage.py changepassword "$admin" <<EOF
 $password
 $password
 EOF
