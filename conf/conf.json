@@ -1,6 +1,6 @@
 {
   "api": "https://__DOMAIN____PATH__/api/v1/",
-  "eventsUrl": "wss://__DOMAIN____PATH__/events",
+  "eventsUrl": null,
   "eventsMaxMissedHeartbeats": 5,
   "eventsHeartbeatIntervalTime": 60000,
   "debug": false,
