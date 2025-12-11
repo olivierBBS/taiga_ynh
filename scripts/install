@@ -279,6 +279,11 @@ ynh_script_progression "Creating data directories..."
 # Create media directory
 mkdir -p "$data_dir/media"
 
+# Stop any existing services to prevent conflicts/race conditions
+# This fixes issues where a previous failed install left the service running
+systemctl stop "$app" 2>/dev/null || true
+systemctl stop "$app-celery" 2>/dev/null || true
+
 #=================================================
 # CREATE LOG DIRECTORY
 #=================================================
