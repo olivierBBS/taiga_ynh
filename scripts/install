@@ -121,16 +121,26 @@ ynh_print_info "DEBUG: Looking for prebuilt asset at $LOCAL_PREBUILT"
 ynh_print_info "DEBUG: Contents of $PKG_ROOT:"
 ls -la "$PKG_ROOT"
 
-swap_needed=false
+swap_created=false
 
 # Ensure swap space exists for memory-intensive operations (npm install, db migrations)
-if [[ $(swapon --show | wc -l) -eq 0 ]]; then
+# We create a dedicated swap file if it doesn't exist, to ensure we have enough memory
+# regardless of existing system swap (which might be small).
+if [ ! -f /var/swapfile_taiga_install ]; then
     ynh_script_progression "Creating temporary swap file (2GB)..."
-    swap_needed=true
-    fallocate -l 2G /tmp/taiga_swap || dd if=/dev/zero of=/tmp/taiga_swap bs=1M count=2048
-    chmod 600 /tmp/taiga_swap
-    mkswap /tmp/taiga_swap
-    swapon /tmp/taiga_swap
+    fallocate -l 2G /var/swapfile_taiga_install || dd if=/dev/zero of=/var/swapfile_taiga_install bs=1M count=2048
+    chmod 600 /var/swapfile_taiga_install
+    mkswap /var/swapfile_taiga_install
+    swapon /var/swapfile_taiga_install
+    swap_created=true
+else
+    ynh_print_info "Temporary swap file /var/swapfile_taiga_install already exists, skipping creation."
+    # If it exists, we assume it's already active or we shouldn't touch it.
+    # But we should probably ensure it's active?
+    if ! swapon --show | grep -q "/var/swapfile_taiga_install"; then
+        swapon /var/swapfile_taiga_install
+        swap_created=true
+    fi
 fi
 
 pushd "$install_dir/taiga-front"
@@ -305,10 +315,10 @@ ynh_systemctl --service="$app-celery" --action="enable"
 ynh_systemctl --service="$app-celery" --action="start"
 
 # Remove temporary swap if we created it
-if [[ "$swap_needed" == "true" ]]; then
+if [[ "$swap_created" == "true" ]]; then
     ynh_script_progression "Removing temporary swap file..."
-    swapoff /tmp/taiga_swap
-    rm -f /tmp/taiga_swap
+    swapoff /var/swapfile_taiga_install
+    rm -f /var/swapfile_taiga_install
 fi
 
 #=================================================
