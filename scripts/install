@@ -255,6 +255,9 @@ ynh_script_progression "Initializing database..." --weight=5
 pushd "$install_dir/taiga-back"
     # Run migrations
     sudo -u "$app" env DJANGO_SETTINGS_MODULE=settings.local "$install_dir/venv/bin/python" manage.py migrate --noinput
+
+    # Load initial data (Project Templates)
+    sudo -u "$app" env DJANGO_SETTINGS_MODULE=settings.local "$install_dir/venv/bin/python" manage.py loaddata initial_project_templates
     
     # Collect static files
     sudo -u "$app" env DJANGO_SETTINGS_MODULE=settings.local "$install_dir/venv/bin/python" manage.py collectstatic --noinput
