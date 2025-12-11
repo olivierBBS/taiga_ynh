@@ -93,3 +93,7 @@ EVENTS_PUSH_BACKEND_OPTIONS = {
 
 # Celery
 CELERY_ENABLED = True
+
+# Security headers for reverse proxy
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
