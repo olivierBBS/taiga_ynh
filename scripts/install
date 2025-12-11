@@ -97,6 +97,14 @@ grep "PASSWORD" "$install_dir/taiga-back/settings/local.py" || true
 ynh_print_info "DEBUG: Checking HOST line:"
 grep "HOST" "$install_dir/taiga-back/settings/local.py" || true
 
+# Debug: Verify DB connection with psql
+ynh_print_info "DEBUG: Testing DB connection with psql..."
+PGPASSWORD="$db_pwd" psql -h "/var/run/postgresql" -U "$db_user" -d "$db_name" -c "\conninfo" || ynh_print_warn "DEBUG: psql connection failed"
+
+# Debug: Verify Django settings
+ynh_print_info "DEBUG: Verifying Django settings..."
+sudo -u "$app" "$install_dir/venv/bin/python" -c "import sys, os; sys.path.append('$install_dir/taiga-back'); os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.local'); from django.conf import settings; print(f'DB Host: {settings.DATABASES[\"default\"][\"HOST\"]}'); print(f'DB Port: {settings.DATABASES[\"default\"][\"PORT\"]}')" || true
+
 # Set proper permissions on config
 chmod 600 "$install_dir/taiga-back/settings/local.py"
 
