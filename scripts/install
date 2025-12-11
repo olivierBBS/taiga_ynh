@@ -227,13 +227,6 @@ pushd "$install_dir/taiga-front"
     fi
 popd
 
-# Remove temporary swap if we created it
-if [[ "$swap_needed" == "true" ]]; then
-    ynh_script_progression "Removing temporary swap file..."
-    swapoff /tmp/taiga_swap
-    rm -f /tmp/taiga_swap
-fi
-
 # Copy built frontend to final location
 mkdir -p "$install_dir/front-dist"
 cp -r "$install_dir/taiga-front/dist/"* "$install_dir/front-dist/"
@@ -309,6 +302,13 @@ ynh_systemctl --service="$app" --action="enable"
 ynh_systemctl --service="$app" --action="start" --wait_until="Listening at"
 ynh_systemctl --service="$app-celery" --action="enable"
 ynh_systemctl --service="$app-celery" --action="start"
+
+# Remove temporary swap if we created it
+if [[ "$swap_needed" == "true" ]]; then
+    ynh_script_progression "Removing temporary swap file..."
+    swapoff /tmp/taiga_swap
+    rm -f /tmp/taiga_swap
+fi
 
 #=================================================
 # END OF SCRIPT
