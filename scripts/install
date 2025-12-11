@@ -305,8 +305,9 @@ ynh_config_add_nginx
 # Set permissions
 chown -R "$app:$app" "$install_dir"
 chown -R "$app:$app" "$data_dir"
-chmod 750 "$install_dir"
-chmod 750 "$data_dir"
+# Allow Nginx (www-data) to traverse directories to serve static files
+chmod 755 "$install_dir"
+chmod 755 "$data_dir"
 
 #=================================================
 # START SYSTEMD SERVICE
