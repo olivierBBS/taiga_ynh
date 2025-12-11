@@ -104,14 +104,18 @@ PGPASSWORD="$db_pwd" psql -h "/var/run/postgresql" -U "$db_user" -d "$db_name" -
 # Debug: Verify Django settings
 ynh_print_info "DEBUG: Verifying Django settings..."
 # Debug: Verify Django settings and environment
-sudo -u "$app" "$install_dir/venv/bin/python" -c "
+cat <<EOF > "$install_dir/debug_db.py"
 import sys, os, psycopg2
 sys.path.append('$install_dir/taiga-back')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.local')
 from django.conf import settings
 
 print('--- DEBUG START ---')
-print(f'DB Config in Settings: {settings.DATABASES["default"]}')
+try:
+    print(f'DB Config in Settings: {settings.DATABASES["default"]}')
+except Exception as e:
+    print(f'Error reading settings: {e}')
+
 print(f'Environment PGHOST: {os.environ.get("PGHOST")}')
 print(f'Environment PGPORT: {os.environ.get("PGPORT")}')
 
@@ -130,7 +134,11 @@ except Exception as e:
     print(f'Raw psycopg2 connection: FAILED - {e}')
 
 print('--- DEBUG END ---')
-"
+EOF
+
+chown $app:$app "$install_dir/debug_db.py"
+sudo -u "$app" "$install_dir/venv/bin/python" "$install_dir/debug_db.py"
+rm "$install_dir/debug_db.py"
 
 # Set proper permissions on config
 chmod 600 "$install_dir/taiga-back/settings/local.py"
