@@ -167,21 +167,9 @@ pushd "$install_dir/taiga-front"
         ynh_print_warn "WARNING: Pre-built frontend not found! Falling back to source build."
         ynh_print_warn "This requires 8GB+ RAM and may crash your server."
 
-        # Ensure Node.js 18 is active (node-sass incompatible with v22+)
-        # Remove /usr/local nodejs that shadows the system package
-        rm -f /usr/local/bin/node /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
-        rm -rf /usr/local/lib/node_modules
-
-        # Verify we have Node.js 18+
-        if command -v node >/dev/null 2>&1; then
-            node_version=$(node --version | cut -d'v' -f2 | cut -d'.' -f1)
-            if [[ "$node_version" -lt 18 ]]; then
-                ynh_die "Node.js 18+ is required but version $node_version is active"
-            fi
-        else
-            ynh_die "Node.js is required but not found"
-        fi
-
+        # Install Node.js 18+
+        ynh_nodejs_install
+        
         # Set ownership of install directory so app user can build
         chown -R "$app:$app" "$install_dir"
         

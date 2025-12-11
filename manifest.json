@@ -75,9 +75,7 @@
             "redis-server",
             "rabbitmq-server",
             "postgresql",
-            "postgresql-contrib",
-            "nodejs",
-            "npm"
+            "postgresql-contrib"
         ]
     }
 }
