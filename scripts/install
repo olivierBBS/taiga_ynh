@@ -78,7 +78,7 @@ python3 -m venv "$install_dir/venv"
 # Install Python packages
 "$install_dir/venv/bin/pip" install --upgrade pip wheel setuptools
 "$install_dir/venv/bin/pip" install -r "$install_dir/taiga-back/requirements.txt"
-"$install_dir/venv/bin/pip" install gunicorn gevent django-redis
+"$install_dir/venv/bin/pip" install gunicorn gevent django-redis==5.4.0
 
 #=================================================
 # ADD TAIGA CONFIGURATION

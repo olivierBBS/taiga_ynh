@@ -42,7 +42,7 @@ ynh_script_progression "Updating Python dependencies..." --weight=15
 # Update virtualenv
 "$install_dir/venv/bin/pip" install --upgrade pip wheel setuptools
 "$install_dir/venv/bin/pip" install --upgrade -r "$install_dir/taiga-back/requirements.txt"
-"$install_dir/venv/bin/pip" install --upgrade gunicorn gevent django-redis
+"$install_dir/venv/bin/pip" install --upgrade gunicorn gevent django-redis==5.4.0
 
 #=================================================
 # UPDATE BACKEND CONFIGURATION
