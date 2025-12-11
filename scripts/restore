@@ -21,6 +21,16 @@ ynh_restore "$data_dir"
 #=================================================
 ynh_script_progression "Restoring the PostgreSQL database..."
 
+db_name=$(ynh_app_setting_get --key=db_name)
+db_user=$(ynh_app_setting_get --key=db_user)
+db_pwd=$(ynh_app_setting_get --key=db_pwd)
+
+# Drop and recreate the database to ensure a clean restore
+ynh_psql_drop_db "$db_name"
+ynh_psql_drop_user "$db_user"
+ynh_psql_create_user "$db_user" "$db_pwd"
+ynh_psql_create_db "$db_name" "$db_user"
+
 ynh_psql_db_shell < ./db.sql
 
 #=================================================
