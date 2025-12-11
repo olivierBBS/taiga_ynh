@@ -122,6 +122,17 @@ ynh_print_info "DEBUG: Contents of $PKG_ROOT:"
 ls -la "$PKG_ROOT"
 
 swap_needed=false
+
+# Ensure swap space exists for memory-intensive operations (npm install, db migrations)
+if [[ $(swapon --show | wc -l) -eq 0 ]]; then
+    ynh_script_progression "Creating temporary swap file (2GB)..."
+    swap_needed=true
+    fallocate -l 2G /tmp/taiga_swap || dd if=/dev/zero of=/tmp/taiga_swap bs=1M count=2048
+    chmod 600 /tmp/taiga_swap
+    mkswap /tmp/taiga_swap
+    swapon /tmp/taiga_swap
+fi
+
 pushd "$install_dir/taiga-front"
     # Check if pre-built assets package exists
     TMP_PREBUILT="/tmp/taiga-front-prebuilt.tar.gz"
@@ -163,16 +174,6 @@ pushd "$install_dir/taiga-front"
 
         # Set ownership of install directory so app user can build
         chown -R "$app:$app" "$install_dir"
-
-        # Ensure swap space exists for memory-intensive npm install
-        if [[ $(swapon --show | wc -l) -eq 0 ]]; then
-            ynh_script_progression "Creating temporary swap file (2GB) for build..."
-            swap_needed=true
-            fallocate -l 2G /tmp/taiga_swap || dd if=/dev/zero of=/tmp/taiga_swap bs=1M count=2048
-            chmod 600 /tmp/taiga_swap
-            mkswap /tmp/taiga_swap
-            swapon /tmp/taiga_swap
-        fi
         
         # Build from source (requires 8GB+ RAM)
         ynh_script_progression "Building from source (requires 8GB+ RAM)..."
