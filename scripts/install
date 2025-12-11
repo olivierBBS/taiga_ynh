@@ -103,7 +103,34 @@ PGPASSWORD="$db_pwd" psql -h "/var/run/postgresql" -U "$db_user" -d "$db_name" -
 
 # Debug: Verify Django settings
 ynh_print_info "DEBUG: Verifying Django settings..."
-sudo -u "$app" "$install_dir/venv/bin/python" -c "import sys, os; sys.path.append('$install_dir/taiga-back'); os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.local'); from django.conf import settings; print(f'DB Host: {settings.DATABASES[\"default\"][\"HOST\"]}'); print(f'DB Port: {settings.DATABASES[\"default\"][\"PORT\"]}')" || true
+# Debug: Verify Django settings and environment
+sudo -u "$app" "$install_dir/venv/bin/python" -c "
+import sys, os, psycopg2
+sys.path.append('$install_dir/taiga-back')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.local')
+from django.conf import settings
+
+print('--- DEBUG START ---')
+print(f'DB Config in Settings: {settings.DATABASES["default"]}')
+print(f'Environment PGHOST: {os.environ.get("PGHOST")}')
+print(f'Environment PGPORT: {os.environ.get("PGPORT")}')
+
+# Test raw psycopg2 connection with explicit socket
+print('Testing raw psycopg2 connection to /var/run/postgresql...')
+try:
+    conn = psycopg2.connect(
+        dbname='${db_name}',
+        user='${db_user}',
+        password='${db_pwd}',
+        host='/var/run/postgresql'
+    )
+    print('Raw psycopg2 connection: SUCCESS')
+    conn.close()
+except Exception as e:
+    print(f'Raw psycopg2 connection: FAILED - {e}')
+
+print('--- DEBUG END ---')
+"
 
 # Set proper permissions on config
 chmod 600 "$install_dir/taiga-back/settings/local.py"
