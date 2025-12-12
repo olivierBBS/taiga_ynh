@@ -92,6 +92,5 @@ ram.runtime = "256M"
         "npm"
     ]
 
-    # Database handled manually in install script to control password
-    # [resources.database]
-    # type = "postgresql"
+    [resources.database]
+    type = "postgresql"

@@ -12,9 +12,6 @@ ynh_script_progression "Initializing installation parameters..."
 secret_key=$(ynh_string_random --length=50)
 rabbitmq_pwd=$(ynh_string_random --length=32)
 rabbitmq_user=$app
-db_pwd=$(ynh_string_random --length=32)
-db_name=$app
-db_user=$app
 
 # Store settings
 ynh_app_setting_set --key=secret_key --value="$secret_key"
@@ -23,28 +20,6 @@ ynh_app_setting_set --key=rabbitmq_pwd --value="$rabbitmq_pwd"
 ynh_app_setting_set --key=db_name --value="$db_name"
 ynh_app_setting_set --key=db_user --value="$db_user"
 ynh_app_setting_set --key=db_pwd --value="$db_pwd"
-
-#=================================================
-# CREATE DATABASE
-#=================================================
-ynh_script_progression "Creating PostgreSQL database..." --weight=1
-
-# Drop existing user/db from failed installs to ensure clean state
-sudo --login --user=postgres psql -c "DROP DATABASE IF EXISTS $db_name;" 2>/dev/null || true
-sudo --login --user=postgres psql -c "DROP USER IF EXISTS $db_user;" 2>/dev/null || true
-
-ynh_psql_create_user "$db_user" "$db_pwd"
-ynh_psql_create_db "$db_name" "$db_user"
-
-# Wait for DB to be fully ready
-sleep 2
-
-# Debug: verify db_pwd is set
-if [ -z "$db_pwd" ]; then
-    ynh_die "Error: db_pwd is empty!"
-fi
-ynh_print_info "DEBUG: db_pwd length is ${#db_pwd}"
-
 
 #=================================================
 # DOWNLOAD, CHECK AND UNPACK SOURCE
