@@ -12,7 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: yunohost/ci-action@v1
+      - uses: YunoHost/ci_action@v1
         with:
           # The ID of the app in the manifest
           app_id: taiga
+          # Custom tests.toml file
+          custom_tests: tests.toml
