@@ -18,5 +18,9 @@ Thumbs.db
 # Ignore backup and temp files
 *.bak
 *.tmp
-taiga-src/
-taiga-src/
+
+# Ignore development/debugging artifacts
+.archive/
+log*
+investigation_summary.md
+tail*.md
